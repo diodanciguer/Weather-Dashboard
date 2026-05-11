@@ -44,7 +44,7 @@ You need to have [Node.js](https://nodejs.org) installed on your system.
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/Weather-Dashboard.git
+git clone https://github.com/diodanciguer/Weather-Dashboard.git
 ```
 
 2. Navigate into the project folder:
@@ -119,7 +119,7 @@ Você vai precisar ter o [Node.js](https://nodejs.org) instalado na sua máquina
 
 1. Clone este repositório:
 ```bash
-git clone https://github.com/SEU_USUARIO/Weather-Dashboard.git
+git clone https://github.com/diodanciguer/Weather-Dashboard.git
 ```
 
 2. Acesse a pasta do projeto:
