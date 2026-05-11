@@ -1,132 +1,131 @@
 import { getWeatherDetails } from './api.js';
 
-// DOM Elements
-const appContainer = document.getElementById('app');
-const weatherContent = document.getElementById('weather-content');
-const globalLoading = document.getElementById('global-loading');
-const errorMessage = document.getElementById('error-message');
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+const weatherContent  = document.getElementById('weather-content');
+const globalLoading   = document.getElementById('global-loading');
+const errorMessage    = document.getElementById('error-message');
+const appEl           = document.getElementById('app');
 
-// Atualiza o clima atual
-export function updateCurrentWeather(data, cityData) {
-  const current = data.current;
-  const isDay = current.is_day;
-  const weather = getWeatherDetails(current.weather_code, isDay);
-
-  document.getElementById('current-city').textContent = cityData.name;
-  document.getElementById('current-temp').textContent = Math.round(current.temperature_2m);
-  document.getElementById('current-desc').textContent = weather.desc;
-  
-  // Formatar Data
-  const dateOptions = { weekday: 'long', day: 'numeric', month: 'long' };
-  document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-BR', dateOptions);
-
-  // Criar icone dinamicamente (Lucide)
-  const iconContainer = document.getElementById('current-icon');
-  // Usaremos um span no lugar do img para renderizar o icone lucide se necessário, 
-  // mas para manter a estrutura vamos colocar o icone ao lado da descrição e atualizar a imagem caso tenhamos SVGs reais.
-  // Por ora, ocultamos a imagem e criamos um container para o icone.
-  iconContainer.style.display = 'none';
-  
-  let iconElement = document.getElementById('dynamic-icon');
-  if (!iconElement) {
-    iconElement = document.createElement('i');
-    iconElement.id = 'dynamic-icon';
-    iconElement.style.width = '120px';
-    iconElement.style.height = '120px';
-    iconElement.style.display = 'block';
-    iconElement.style.margin = '0 auto';
-    // insere após o current-info
-    document.querySelector('.current-weather').appendChild(iconElement);
-  }
-  
-  iconElement.setAttribute('data-lucide', weather.icon);
-
-  // Atualizar Tema com base no clima
-  updateTheme(current.weather_code, isDay);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function lucideIcon(name, extra = '') {
+  return `<i data-lucide="${name}" ${extra}></i>`;
 }
 
-// Atualiza previsões horárias
+function rerender() {
+  if (window.lucide) window.lucide.createIcons();
+}
+
+// ─── Current Weather ──────────────────────────────────────────────────────────
+export function updateCurrentWeather(data, cityData) {
+  const c      = data.current;
+  const isDay  = c.is_day;
+  const detail = getWeatherDetails(c.weather_code, isDay);
+
+  document.getElementById('current-city').textContent = cityData.name;
+  document.getElementById('current-temp').textContent = Math.round(c.temperature_2m);
+  document.getElementById('current-desc').textContent = detail.desc;
+
+  // Date
+  const dateOpts = { weekday: 'long', day: 'numeric', month: 'long' };
+  document.getElementById('current-date').textContent =
+    new Date().toLocaleDateString('pt-BR', dateOpts);
+
+  // Hero icon — Lucide SVG grande
+  const hero = document.getElementById('hero-icon');
+  hero.innerHTML = lucideIcon(detail.icon);
+
+  // Dynamic theme
+  updateTheme(c.weather_code, isDay);
+}
+
+// ─── Hourly ───────────────────────────────────────────────────────────────────
 export function updateHourlyForecast(data) {
-  const container = document.getElementById('hourly-container');
+  const container  = document.getElementById('hourly-container');
   container.innerHTML = '';
 
-  // Pegar as próximas 24 horas a partir de agora
-  const now = new Date();
-  const currentHour = now.getHours();
-  
-  // A API retorna um array de 168 horas (7 dias). Precisamos encontrar o index atual.
-  // Uma abordagem simples: o index é o currentHour se for do mesmo dia.
-  // A API retorna por padrão as últimas horas começando da meia noite local.
-  const startIndex = currentHour;
-  const next24Hours = data.hourly.temperature_2m.slice(startIndex, startIndex + 24);
-  const next24Codes = data.hourly.weather_code.slice(startIndex, startIndex + 24);
-  const next24Times = data.hourly.time.slice(startIndex, startIndex + 24);
+  const nowHour    = new Date().getHours();
+  const startIdx   = nowHour;
+  const temps      = data.hourly.temperature_2m.slice(startIdx, startIdx + 24);
+  const codes      = data.hourly.weather_code.slice(startIdx, startIdx + 24);
+  const times      = data.hourly.time.slice(startIdx, startIdx + 24);
 
-  next24Hours.forEach((temp, i) => {
-    const timeDate = new Date(next24Times[i]);
-    const isDayH = (timeDate.getHours() >= 6 && timeDate.getHours() < 18) ? 1 : 0;
-    const weather = getWeatherDetails(next24Codes[i], isDayH);
-    const timeString = timeDate.getHours() === currentHour ? 'Agora' : `${timeDate.getHours()}:00`;
+  temps.forEach((temp, i) => {
+    const dt     = new Date(times[i]);
+    const hr     = dt.getHours();
+    const isDayH = hr >= 6 && hr < 19 ? 1 : 0;
+    const det    = getWeatherDetails(codes[i], isDayH);
+    const isNow  = i === 0;
 
     const el = document.createElement('div');
-    el.className = 'hourly-item';
+    el.className = 'hourly-item' + (isNow ? ' active-hour' : '');
     el.innerHTML = `
-      <span class="time">${timeString}</span>
-      <i data-lucide="${weather.icon}"></i>
-      <span class="temp">${Math.round(temp)}°</span>
+      <span class="h-time">${isNow ? 'Agora' : `${String(hr).padStart(2, '0')}h`}</span>
+      ${lucideIcon(det.icon)}
+      <span class="h-temp">${Math.round(temp)}°</span>
     `;
     container.appendChild(el);
   });
 }
 
-// Atualiza previsão de 7 dias
+// ─── Daily ────────────────────────────────────────────────────────────────────
 export function updateDailyForecast(data) {
   const container = document.getElementById('daily-container');
   container.innerHTML = '';
 
-  const daily = data.daily;
+  const { time, weather_code, temperature_2m_max, temperature_2m_min } = data.daily;
   const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  daily.time.forEach((dateString, i) => {
-    if (i === 0) return; // Pula o dia de hoje (já mostrado)
-
-    const date = new Date(dateString + 'T12:00:00'); // Evita erro de fuso horário
-    const weather = getWeatherDetails(daily.weather_code[i], 1); // Considera dia para o icone diario
+  time.forEach((dateStr, i) => {
+    if (i === 0) return; // skip today (already shown)
+    const date = new Date(dateStr + 'T12:00:00');
+    const det  = getWeatherDetails(weather_code[i], 1);
 
     const el = document.createElement('div');
     el.className = 'daily-item';
     el.innerHTML = `
-      <span class="day">${days[date.getDay()]}</span>
-      <i data-lucide="${weather.icon}" class="icon"></i>
-      <div class="temps">
-        <span class="high">${Math.round(daily.temperature_2m_max[i])}°</span>
-        <span class="low">${Math.round(daily.temperature_2m_min[i])}°</span>
+      <span class="d-day">${days[date.getDay()]}</span>
+      ${lucideIcon(det.icon)}
+      <div class="d-temps">
+        <span class="d-high">${Math.round(temperature_2m_max[i])}°</span>
+        <span class="d-low">${Math.round(temperature_2m_min[i])}°</span>
       </div>
     `;
     container.appendChild(el);
   });
 }
 
-// Atualiza Métricas avançadas
+// ─── Metrics ──────────────────────────────────────────────────────────────────
 export function updateMetrics(data) {
-  const current = data.current;
+  const c     = data.current;
   const daily = data.daily;
-  
-  document.getElementById('feels-like').textContent = Math.round(current.apparent_temperature);
-  document.getElementById('humidity').textContent = Math.round(current.relative_humidity_2m);
-  document.getElementById('wind').textContent = Math.round(current.wind_speed_10m);
-  document.getElementById('pressure').textContent = Math.round(current.surface_pressure);
-  
-  // A Open-Meteo não retorna visibilidade no endpoint atual padrão, 
-  // usaremos um fallback visual ou mock se não existir.
-  const vis = current.visibility ? Math.round(current.visibility / 1000) : '--';
+
+  document.getElementById('feels-like').textContent = Math.round(c.apparent_temperature);
+  document.getElementById('humidity').textContent   = Math.round(c.relative_humidity_2m);
+  document.getElementById('wind').textContent       = Math.round(c.wind_speed_10m);
+  document.getElementById('pressure').textContent   = Math.round(c.surface_pressure);
+
+  // Visibility not always in free tier — fallback
+  const vis = c.visibility != null ? Math.round(c.visibility / 1000) : '--';
   document.getElementById('visibility').textContent = vis;
-  
-  // UV Index
-  document.getElementById('uv-index').textContent = daily.uv_index_max[0] ? Math.round(daily.uv_index_max[0]) : '--';
+
+  // UV Index + label
+  const uv    = daily.uv_index_max?.[0] != null ? Math.round(daily.uv_index_max[0]) : '--';
+  const uvEl  = document.getElementById('uv-index');
+  const uvLbl = document.getElementById('uv-label');
+
+  let uvLabel = '';
+  if (typeof uv === 'number') {
+    if (uv <= 2)       uvLabel = '🟢 Baixo';
+    else if (uv <= 5)  uvLabel = '🟡 Moderado';
+    else if (uv <= 7)  uvLabel = '🟠 Alto';
+    else if (uv <= 10) uvLabel = '🔴 Muito Alto';
+    else               uvLabel = '🟣 Extremo';
+  }
+  uvEl.innerHTML  = `${uv}<span class="metric-unit"></span>`;
+  uvLbl.textContent = uvLabel;
 }
 
-// Controle de Estados da UI
+// ─── UI State Helpers ─────────────────────────────────────────────────────────
 export function showLoading() {
   globalLoading.classList.remove('hidden');
   weatherContent.classList.add('hidden');
@@ -136,30 +135,23 @@ export function showLoading() {
 export function hideLoading() {
   globalLoading.classList.add('hidden');
   weatherContent.classList.remove('hidden');
-  
-  // Recarrega os ícones Lucide para os novos elementos injetados
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
+  rerender();
 }
 
 export function showError(msg) {
   globalLoading.classList.add('hidden');
   errorMessage.classList.remove('hidden');
-  if(msg) errorMessage.textContent = msg;
+  weatherContent.classList.add('hidden');
+  if (msg) errorMessage.textContent = msg;
 }
 
-// Troca de Temas
+// ─── Theme ────────────────────────────────────────────────────────────────────
 function updateTheme(code, isDay) {
-  appContainer.className = 'app-container glass-panel'; // reset
-  
-  if (!isDay) {
-    appContainer.classList.add('theme-night');
-    return;
-  }
+  appEl.className = 'app-container'; // reset
 
-  // Chuva / Tempestade / Nevoeiro -> Tema mais escuro/frio
-  if ([45, 48, 51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) {
-    appContainer.classList.add('theme-rain');
-  }
+  if (!isDay) { appEl.classList.add('theme-night'); return; }
+
+  if ([95, 96, 99].includes(code))                             appEl.classList.add('theme-storm');
+  else if ([45, 48].includes(code))                            appEl.classList.add('theme-fog');
+  else if ([51,53,55,61,63,65,80,81,82].includes(code))        appEl.classList.add('theme-rain');
 }

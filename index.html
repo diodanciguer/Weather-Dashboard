@@ -2,122 +2,112 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Weather Dashboard — consulte o clima atual e previsões para qualquer cidade do mundo.">
     <title>Weather Dashboard</title>
-    <!-- Google Fonts -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><circle cx='12' cy='12' r='5'/><path d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/></svg>" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/src/css/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   </head>
   <body>
-    <div id="app" class="app-container glass-panel">
-      
+    <div id="app" class="app-container">
+
+      <!-- ── Header / Search ── -->
       <header>
         <div class="search-bar">
           <i data-lucide="search"></i>
           <input type="text" id="search-input" placeholder="Buscar cidade..." autocomplete="off">
-          <button id="location-btn" aria-label="Usar localização atual" title="Usar localização atual">
-            <i data-lucide="map-pin"></i>
+          <button id="location-btn" aria-label="Usar minha localização">
+            <i data-lucide="navigation-2"></i>
           </button>
         </div>
       </header>
 
+      <!-- ── Dashboard ── -->
       <main class="dashboard">
-        <!-- Global Loading State -->
-        <div id="global-loading" class="global-loading hidden">
+
+        <!-- Loading -->
+        <div id="global-loading" class="hidden">
           <div class="spinner"></div>
           <p>Buscando clima...</p>
         </div>
 
-        <!-- Error Message -->
-        <div id="error-message" class="error-message hidden">
-          Cidade não encontrada. Tente novamente.
-        </div>
+        <!-- Error -->
+        <p id="error-message" class="hidden">Cidade não encontrada. Tente outra busca.</p>
 
-        <!-- Weather Content Grid -->
+        <!-- Content Grid -->
         <div id="weather-content" class="weather-content hidden">
-          
-          <!-- Current Weather -->
-          <section class="current-weather glass-panel">
+
+          <!-- ① Hero Card — Clima Atual -->
+          <section class="current-weather glass" id="current-weather-card">
             <div class="current-weather-info">
-              <h1 class="city" id="current-city">São Paulo</h1>
-              <p class="date" id="current-date">Segunda-feira, 11 Maio</p>
-              <h2 class="temp"><span id="current-temp">24</span>°C</h2>
-              <p class="description" id="current-desc">Ensolarado</p>
+              <h1 class="city" id="current-city">—</h1>
+              <p class="date" id="current-date">—</p>
+              <div class="temp-row">
+                <span class="temp" id="current-temp">—</span>
+                <span class="temp-unit">°C</span>
+              </div>
+              <p class="description" id="current-desc">—</p>
             </div>
-            <img src="" alt="Ícone do clima" id="current-icon" class="current-weather-icon">
+            <!-- Hero Icon injetado via JS -->
+            <div class="weather-icon-hero" id="hero-icon"></div>
           </section>
 
-          <!-- Hourly Forecast -->
-          <section class="hourly-forecast glass-panel">
-            <h2>Hoje</h2>
-            <div class="hourly-scroll" id="hourly-container">
-              <!-- JS Injected -->
-            </div>
+          <!-- ② Previsão Horária -->
+          <section class="hourly-forecast glass">
+            <p class="section-label">Hoje — Por Hora</p>
+            <div class="hourly-scroll" id="hourly-container"></div>
           </section>
 
-          <!-- 7-Day Forecast -->
-          <section class="daily-forecast glass-panel">
-            <h2>Próximos Dias</h2>
-            <div class="daily-list" id="daily-container">
-              <!-- JS Injected -->
-            </div>
+          <!-- ③ 7 Dias (sidebar) -->
+          <section class="daily-forecast glass">
+            <p class="section-label" style="margin-bottom:1.2rem">Próximos 7 Dias</p>
+            <div class="daily-list" id="daily-container"></div>
           </section>
 
-          <!-- Advanced Metrics -->
+          <!-- ④ Métricas Avançadas -->
           <section class="metrics-section">
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="thermometer-sun"></i>
-                Sensação Térmica
-              </div>
-              <div class="metric-value"><span id="feels-like">25</span>°</div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="thermometer"></i> Sensação Térmica</p>
+              <p class="metric-val"><span id="feels-like">—</span><span class="metric-unit">°</span></p>
             </div>
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="droplets"></i>
-                Umidade
-              </div>
-              <div class="metric-value"><span id="humidity">60</span>%</div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="droplets"></i> Umidade</p>
+              <p class="metric-val"><span id="humidity">—</span><span class="metric-unit">%</span></p>
             </div>
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="wind"></i>
-                Vento
-              </div>
-              <div class="metric-value"><span id="wind">15</span> <span style="font-size: 1rem">km/h</span></div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="wind"></i> Vento</p>
+              <p class="metric-val"><span id="wind">—</span><span class="metric-unit"> km/h</span></p>
             </div>
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="sun"></i>
-                Índice UV
-              </div>
-              <div class="metric-value"><span id="uv-index">5</span></div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="sun"></i> Índice UV</p>
+              <p class="metric-val" id="uv-index">—</p>
+              <p class="metric-sub" id="uv-label"></p>
             </div>
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="eye"></i>
-                Visibilidade
-              </div>
-              <div class="metric-value"><span id="visibility">10</span> <span style="font-size: 1rem">km</span></div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="eye"></i> Visibilidade</p>
+              <p class="metric-val"><span id="visibility">—</span><span class="metric-unit"> km</span></p>
             </div>
-            <div class="metric-card glass-panel">
-              <div class="metric-header">
-                <i data-lucide="gauge"></i>
-                Pressão
-              </div>
-              <div class="metric-value"><span id="pressure">1012</span> <span style="font-size: 1rem">hPa</span></div>
+
+            <div class="metric-card glass">
+              <p class="metric-label"><i data-lucide="gauge"></i> Pressão</p>
+              <p class="metric-val"><span id="pressure">—</span><span class="metric-unit"> hPa</span></p>
             </div>
+
           </section>
-        </div>
+
+        </div><!-- /weather-content -->
       </main>
     </div>
 
-    <!-- Init script -->
     <script type="module" src="/src/js/main.js"></script>
   </body>
 </html>
