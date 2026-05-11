@@ -529,10 +529,13 @@ header {
   .hero-card{padding:1.6rem 1.4rem;flex-direction:column;align-items:flex-start;min-height:auto;gap:1.2rem}
   .hero-icon-wrap{width:80px;height:80px;position:absolute;top:1.4rem;right:1.4rem}
   .hero-icon-wrap svg{width:64px;height:64px}
+  .hero-body{padding-right:75px} /* Evita que o texto sobreponha o ícone do sol */
   .hero-temp{font-size:4.8rem}
   .metrics-bento{grid-template-columns:repeat(2,1fr);gap:0.8rem}
   .mc-val{font-size:2rem}
-  header{gap:0.5rem}
+  header{flex-direction:column;align-items:stretch;gap:1rem} /* Coloca a barra de pesquisa acima dos botões */
+  .header-actions{justify-content:center;flex-wrap:nowrap;gap:0.6rem}
+  .hdr-btn{width:40px;height:40px}
 }
 
 /* ── New Features CSS ── */
@@ -624,5 +627,5 @@ header {
   .skeleton-grid { grid-template-columns:1fr; }
   .sk-sidebar { grid-column:1/2; grid-row:auto; height:300px; }
   .compare-grid { grid-template-columns:1fr; }
-  .header-actions { flex-wrap:wrap;justify-content:flex-end; }
+  .header-actions { flex-wrap:nowrap;justify-content:flex-end; }
 }
