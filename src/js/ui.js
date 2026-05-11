@@ -293,10 +293,16 @@ function checkAlerts(data, aqi) {
   else hideAlert();
 }
 
+let alertTimeout;
 export function showAlert(msg) {
   const el = document.getElementById('alert-banner');
   document.getElementById('alert-text').textContent = msg;
   el.classList.remove('hidden');
+  
+  clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(() => {
+    hideAlert();
+  }, 6000);
 }
 export function hideAlert() {
   document.getElementById('alert-banner').classList.add('hidden');
