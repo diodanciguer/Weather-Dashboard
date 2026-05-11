@@ -3,11 +3,15 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Weather Dashboard — clima atual e previsões para qualquer cidade.">
+  <meta name="description" content="Weather Dashboard — clima atual, previsões e qualidade do ar para qualquer cidade.">
+  <meta name="theme-color" content="#1565d8">
   <title>Weather Dashboard</title>
+  <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="/src/css/style.css">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -19,38 +23,72 @@
   <div class="bg-gradient-overlay"></div>
 </div>
 
+<!-- ── Alert Banner ── -->
+<div id="alert-banner" class="alert-banner hidden">
+  <i data-lucide="alert-triangle"></i>
+  <span id="alert-text">Alerta climático</span>
+  <button id="alert-close" aria-label="Fechar alerta"><i data-lucide="x"></i></button>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast" class="toast hidden"></div>
+
 <div id="app" class="app-container">
 
   <!-- ── Header ── -->
   <header>
     <div class="search-wrapper">
-      <div class="search-bar glass-search" id="search-bar">
+      <div class="glass-search" id="search-bar">
         <i data-lucide="search" class="search-icon"></i>
         <input type="text" id="search-input" placeholder="Buscar cidade..." autocomplete="off" spellcheck="false">
-        <button id="location-btn" aria-label="Usar minha localização" title="Minha localização">
+        <button id="location-btn" aria-label="Minha localização" title="Minha localização">
           <i data-lucide="navigation-2"></i>
         </button>
       </div>
       <ul class="autocomplete-list hidden" id="autocomplete-list"></ul>
     </div>
-    <button id="theme-toggle" aria-label="Alternar tema">
-      <i data-lucide="sun" id="icon-sun"></i>
-      <i data-lucide="moon" id="icon-moon" class="hidden"></i>
-    </button>
+
+    <div class="header-actions">
+      <button id="favs-btn" class="hdr-btn" title="Favoritos"><i data-lucide="star"></i></button>
+      <button id="unit-toggle" class="hdr-btn unit-btn" title="Alternar °C / °F">°C</button>
+      <button id="share-btn" class="hdr-btn" title="Compartilhar"><i data-lucide="share-2"></i></button>
+      <button id="compare-btn" class="hdr-btn" title="Comparar cidades"><i data-lucide="git-compare-arrows"></i></button>
+      <button id="theme-toggle" class="hdr-btn" aria-label="Alternar tema">
+        <i data-lucide="sun" id="icon-sun"></i>
+        <i data-lucide="moon" id="icon-moon" class="hidden"></i>
+      </button>
+    </div>
   </header>
+
+  <!-- ── Favorites Dropdown ── -->
+  <div id="favs-dropdown" class="favs-dropdown hidden glass">
+    <p class="favs-title"><i data-lucide="star"></i> Cidades Favoritas</p>
+    <ul id="favs-list"></ul>
+    <p id="favs-empty" class="favs-empty hidden">Nenhum favorito ainda.<br>Clique em ⭐ no card de clima para salvar.</p>
+  </div>
 
   <!-- ── Dashboard ── -->
   <main class="dashboard">
-    <div id="global-loading" class="loading-state hidden">
-      <div class="spinner"></div>
-      <p>Buscando clima...</p>
+
+    <!-- Skeleton -->
+    <div id="skeleton-loading" class="skeleton-grid hidden">
+      <div class="sk-card sk-hero"></div>
+      <div class="sk-card sk-sidebar"></div>
+      <div class="sk-card sk-hourly"></div>
+      <div class="sk-card sk-metric"></div>
+      <div class="sk-card sk-metric"></div>
+      <div class="sk-card sk-metric"></div>
     </div>
+
     <p id="error-message" class="error-box hidden"></p>
 
     <div id="weather-content" class="weather-content hidden">
 
       <!-- ① Hero -->
-      <section class="hero-card glass anim-card" style="--i:0">
+      <section class="hero-card glass anim-card" id="current-weather-card" style="--i:0">
+        <button id="fav-toggle-btn" class="fav-btn" title="Favoritar cidade">
+          <i data-lucide="star" id="fav-icon"></i>
+        </button>
         <div class="hero-body">
           <div class="hero-city-row">
             <i data-lucide="map-pin"></i>
@@ -62,7 +100,7 @@
           <p id="current-date" class="hero-date"></p>
           <div class="hero-temp-block">
             <span id="current-temp" class="hero-temp">—</span>
-            <span class="hero-unit">°C</span>
+            <span class="hero-unit" id="temp-unit-label">°C</span>
           </div>
           <p id="current-desc" class="hero-desc"></p>
           <p id="current-hilo" class="hero-hilo"></p>
@@ -79,6 +117,24 @@
       <aside class="sidebar glass anim-card" style="--i:1">
         <p class="section-label"><i data-lucide="calendar-days"></i> Próximos 7 Dias</p>
         <ul class="daily-list" id="daily-container"></ul>
+
+        <!-- Weekly temperature chart -->
+        <div class="weekly-chart-wrap">
+          <p class="section-label" style="margin-top:1.1rem"><i data-lucide="trending-up"></i> Temperatura Máxima</p>
+          <svg id="weekly-chart" class="weekly-chart" viewBox="0 0 260 70" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="wk-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(255,255,255,0.22)"/>
+                <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+              </linearGradient>
+            </defs>
+            <path id="wk-area" fill="url(#wk-grad)"/>
+            <path id="wk-line" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <g id="wk-dots"></g>
+            <g id="wk-labels"></g>
+          </svg>
+        </div>
+
         <div class="sun-row">
           <div class="sun-item">
             <i data-lucide="sunrise"></i>
@@ -108,17 +164,15 @@
         </svg>
       </section>
 
-      <!-- ④ Métricas Bento -->
+      <!-- ④ Metrics Bento -->
       <section class="metrics-bento">
 
-        <!-- Sensação -->
         <div class="mc glass anim-card" style="--i:3">
           <p class="mc-label"><i data-lucide="thermometer"></i> Sensação Térmica</p>
-          <p class="mc-val"><span id="feels-like">—</span><span class="mc-unit">°C</span></p>
+          <p class="mc-val"><span id="feels-like">—</span><span class="mc-unit" id="feels-unit">°C</span></p>
           <p class="mc-sub" id="feels-desc"></p>
         </div>
 
-        <!-- Umidade com anel SVG -->
         <div class="mc glass anim-card" style="--i:4">
           <p class="mc-label"><i data-lucide="droplets"></i> Umidade</p>
           <div class="ring-wrap">
@@ -131,7 +185,6 @@
           </div>
         </div>
 
-        <!-- UV com arco -->
         <div class="mc glass anim-card" style="--i:5">
           <p class="mc-label"><i data-lucide="sun"></i> Índice UV</p>
           <div class="arc-wrap">
@@ -141,14 +194,11 @@
                     stroke-width="8" stroke-linecap="round"
                     stroke-dasharray="125.7" stroke-dashoffset="125.7"/>
             </svg>
-            <div class="arc-center">
-              <span class="arc-val" id="uv-val">—</span>
-            </div>
+            <div class="arc-center"><span class="arc-val" id="uv-val">—</span></div>
           </div>
           <p class="mc-sub" id="uv-label"></p>
         </div>
 
-        <!-- Bússola de Vento -->
         <div class="mc glass anim-card" style="--i:6">
           <p class="mc-label"><i data-lucide="wind"></i> Vento</p>
           <div class="compass-wrap">
@@ -168,23 +218,69 @@
           <p class="mc-sub"><span id="wind-speed">—</span> km/h · <span id="wind-dir">—</span></p>
         </div>
 
-        <!-- Visibilidade -->
         <div class="mc glass anim-card" style="--i:7">
           <p class="mc-label"><i data-lucide="eye"></i> Visibilidade</p>
           <p class="mc-val"><span id="visibility">—</span><span class="mc-unit"> km</span></p>
           <div class="vis-bar-wrap"><div class="vis-bar" id="vis-bar"></div></div>
         </div>
 
-        <!-- Pressão -->
         <div class="mc glass anim-card" style="--i:8">
           <p class="mc-label"><i data-lucide="gauge"></i> Pressão Atm.</p>
           <p class="mc-val"><span id="pressure">—</span><span class="mc-unit"> hPa</span></p>
           <p class="mc-sub" id="pressure-label"></p>
         </div>
 
+        <!-- ⑤ Fase da Lua -->
+        <div class="mc glass anim-card" style="--i:9">
+          <p class="mc-label"><i data-lucide="moon-star"></i> Fase da Lua</p>
+          <div class="moon-display">
+            <span class="moon-emoji" id="moon-emoji">🌙</span>
+          </div>
+          <p class="mc-sub" id="moon-label">—</p>
+        </div>
+
+        <!-- ⑪ AQI -->
+        <div class="mc glass anim-card" style="--i:10">
+          <p class="mc-label"><i data-lucide="leaf"></i> Qualidade do Ar</p>
+          <p class="mc-val" id="aqi-val">—</p>
+          <div class="aqi-bar-wrap"><div class="aqi-bar" id="aqi-bar"></div></div>
+          <p class="mc-sub" id="aqi-label">Carregando...</p>
+        </div>
+
+        <!-- Precipitation today -->
+        <div class="mc glass anim-card" style="--i:11">
+          <p class="mc-label"><i data-lucide="cloud-rain"></i> Chuva Hoje</p>
+          <p class="mc-val"><span id="precip-mm">—</span><span class="mc-unit"> mm</span></p>
+          <p class="mc-sub" id="precip-label"></p>
+        </div>
+
       </section>
-    </div>
+
+      <!-- ⑫ Map -->
+      <section class="map-section glass anim-card" style="--i:12" id="map-section">
+        <p class="section-label"><i data-lucide="map"></i> Mapa da Região</p>
+        <div id="map-container" class="map-container"></div>
+      </section>
+
+    </div><!-- /weather-content -->
   </main>
+</div>
+
+<!-- ⑭ Compare Modal -->
+<div id="compare-modal" class="modal-overlay hidden">
+  <div class="modal-panel glass">
+    <div class="modal-header">
+      <h2><i data-lucide="git-compare-arrows"></i> Comparar Cidades</h2>
+      <button id="compare-close" class="modal-close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="compare-search-row">
+      <input type="text" id="compare-input" placeholder="Buscar segunda cidade..." autocomplete="off">
+      <button id="compare-search-btn"><i data-lucide="search"></i></button>
+    </div>
+    <div class="compare-grid" id="compare-grid">
+      <p class="compare-hint">Digite uma cidade para comparar com o clima atual.</p>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="/src/js/main.js"></script>

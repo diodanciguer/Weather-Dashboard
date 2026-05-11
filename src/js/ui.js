@@ -1,10 +1,21 @@
 import { getWeatherDetails, getWindDir } from './api.js';
 
 const weatherContent = document.getElementById('weather-content');
-const globalLoading  = document.getElementById('global-loading');
+const globalLoading  = document.getElementById('skeleton-loading');
 const errorMessage   = document.getElementById('error-message');
 const appEl          = document.getElementById('app');
 const bgEl           = document.getElementById('weather-bg');
+
+let isFahrenheit = localStorage.getItem('wd-unit') === 'F';
+
+export function setUnit(isF) {
+  isFahrenheit = isF;
+}
+
+function fmtTemp(celsius) {
+  const t = isFahrenheit ? (celsius * 9/5) + 32 : celsius;
+  return Math.round(t);
+}
 
 function rerender() { if (window.lucide) window.lucide.createIcons(); }
 
@@ -16,7 +27,8 @@ export function updateCurrentWeather(data, cityData) {
 
   document.getElementById('current-city').textContent    = cityData.name;
   document.getElementById('current-country').textContent = cityData.country || '';
-  document.getElementById('current-temp').textContent    = Math.round(c.temperature_2m);
+  document.getElementById('current-temp').textContent    = fmtTemp(c.temperature_2m);
+  document.getElementById('temp-unit-label').textContent = isFahrenheit ? '°F' : '°C';
   document.getElementById('current-desc').textContent    = detail.desc;
   document.getElementById('current-date').textContent    = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
 
@@ -24,7 +36,7 @@ export function updateCurrentWeather(data, cityData) {
   const hi = data.daily?.temperature_2m_max?.[0];
   const lo = data.daily?.temperature_2m_min?.[0];
   document.getElementById('current-hilo').textContent =
-    hi != null ? `Máx ${Math.round(hi)}° · Mín ${Math.round(lo)}°` : '';
+    hi != null ? `Máx ${fmtTemp(hi)}° · Mín ${fmtTemp(lo)}°` : '';
 
   // Pills
   document.getElementById('hero-precip').textContent = data.daily?.precipitation_probability_max?.[0] ?? '--';
@@ -63,13 +75,13 @@ export function updateHourlyForecast(data) {
     el.innerHTML = `
       <span class="h-time">${i === 0 ? 'Agora' : String(hr).padStart(2,'0') + 'h'}</span>
       <i data-lucide="${det.icon}"></i>
-      <span class="h-temp">${Math.round(temp)}°</span>
+      <span class="h-temp">${fmtTemp(temp)}°</span>
       ${rainHtml}
     `;
     container.appendChild(el);
   });
 
-  drawSparkline(temps);
+  drawSparkline(temps.map(fmtTemp));
 }
 
 function drawSparkline(temps) {
@@ -91,13 +103,15 @@ function drawSparkline(temps) {
   document.getElementById('spark-area').setAttribute('d', areaPath);
 }
 
-// ─── Daily Forecast ───────────────────────────────────────
+// ─── Daily Forecast & Weekly Chart ────────────────────────
 export function updateDailyForecast(data) {
   const container = document.getElementById('daily-container');
   container.innerHTML = '';
 
   const { time, weather_code, temperature_2m_max, temperature_2m_min, precipitation_probability_max } = data.daily;
   const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  const maxTemps = [];
 
   time.forEach((dateStr, i) => {
     if (i === 0) return;
@@ -106,16 +120,22 @@ export function updateDailyForecast(data) {
     const rain  = precipitation_probability_max?.[i];
     const rainHtml = rain > 10 ? `<span class="d-rain">${rain}%</span>` : '<span class="d-rain"></span>';
 
+    const tMax = fmtTemp(temperature_2m_max[i]);
+    const tMin = fmtTemp(temperature_2m_min[i]);
+    maxTemps.push(tMax);
+
     const li = document.createElement('li');
     li.className = 'daily-item';
     li.innerHTML = `
       <span class="d-day">${days[date.getDay()]}</span>
       <i data-lucide="${det.icon}"></i>
       ${rainHtml}
-      <div class="d-temps"><span class="d-hi">${Math.round(temperature_2m_max[i])}°</span><span class="d-lo">${Math.round(temperature_2m_min[i])}°</span></div>
+      <div class="d-temps"><span class="d-hi">${tMax}°</span><span class="d-lo">${tMin}°</span></div>
     `;
     container.appendChild(li);
   });
+
+  drawWeeklyChart(maxTemps);
 
   // Sunrise / Sunset
   const fmt = iso => iso ? new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--';
@@ -123,17 +143,47 @@ export function updateDailyForecast(data) {
   document.getElementById('sunset-time').textContent  = fmt(data.daily?.sunset?.[0]);
 }
 
-// ─── Metrics ──────────────────────────────────────────────
-export function updateMetrics(data) {
+function drawWeeklyChart(temps) {
+  const W = 260, H = 70, PAD = 10;
+  const min = Math.min(...temps);
+  const max = Math.max(...temps);
+  const range = max - min || 1;
+
+  const pts = temps.map((t, i) => {
+    const x = (i / (temps.length - 1)) * W;
+    const y = PAD + (1 - (t - min) / range) * (H - PAD * 2);
+    return [x, y];
+  });
+
+  const linePath = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(' ');
+  const areaPath = linePath + ` L${W},${H} L0,${H} Z`;
+
+  document.getElementById('wk-line').setAttribute('d', linePath);
+  document.getElementById('wk-area').setAttribute('d', areaPath);
+
+  const dotsGroup = document.getElementById('wk-dots');
+  const labelsGroup = document.getElementById('wk-labels');
+  dotsGroup.innerHTML = '';
+  labelsGroup.innerHTML = '';
+
+  pts.forEach((p, i) => {
+    dotsGroup.innerHTML += `<circle cx="${p[0]}" cy="${p[1]}" r="3" class="wk-dot"/>`;
+    labelsGroup.innerHTML += `<text x="${p[0]}" y="${p[1] - 8}" class="wk-lbl">${temps[i]}°</text>`;
+  });
+}
+
+// ─── Metrics & AQI ────────────────────────────────────────
+export function updateMetrics(data, aqiData) {
   const c     = data.current;
   const daily = data.daily;
 
   // Feels like
-  const fl = Math.round(c.apparent_temperature);
+  const fl = fmtTemp(c.apparent_temperature);
   document.getElementById('feels-like').textContent = fl;
-  const diff = fl - Math.round(c.temperature_2m);
+  document.getElementById('feels-unit').textContent = isFahrenheit ? '°F' : '°C';
+  const diff = c.apparent_temperature - c.temperature_2m;
   document.getElementById('feels-desc').textContent =
-    diff < -1 ? `${Math.abs(diff)}° mais frio` : diff > 1 ? `${diff}° mais quente` : 'Similar à temperatura';
+    diff < -1 ? `${Math.abs(Math.round(diff))}° mais frio` : diff > 1 ? `${Math.round(diff)}° mais quente` : 'Similar à temperatura';
 
   // Humidity ring
   const hum = Math.round(c.relative_humidity_2m);
@@ -147,7 +197,6 @@ export function updateMetrics(data) {
   const dir = getWindDir(c.wind_direction_10m ?? 0);
   document.getElementById('wind-speed').textContent = ws;
   document.getElementById('wind-dir').textContent   = dir.label;
-  // Rotate compass needle
   const needle = document.getElementById('compass-needle');
   if (needle) needle.setAttribute('transform', `rotate(${dir.rotation} 40 40)`);
 
@@ -179,9 +228,87 @@ export function updateMetrics(data) {
   const visNum = parseFloat(vis);
   const visPct = !isNaN(visNum) ? Math.min((visNum / 20) * 100, 100) : 0;
   document.getElementById('vis-bar').style.width = visPct + '%';
+
+  // Precipitation Today
+  const precip = c.precipitation || 0;
+  document.getElementById('precip-mm').textContent = precip;
+  document.getElementById('precip-label').textContent = precip > 0 ? 'Chovendo agora' : 'Sem chuva recente';
+
+  // Moon Phase
+  const moon = getMoonPhase();
+  document.getElementById('moon-emoji').textContent = moon.emoji;
+  document.getElementById('moon-label').textContent = moon.label;
+
+  // AQI
+  if (aqiData) {
+    const aqi = aqiData.us_aqi;
+    document.getElementById('aqi-val').textContent = aqi;
+    const aqiMap = [
+      [0,50,'Boa','#4ade80'],[51,100,'Moderada','#facc15'],
+      [101,150,'Ruim (Grupos Sensíveis)','#fb923c'],
+      [151,200,'Ruim','#ef4444'],[201,500,'Muito Ruim','#a855f7']
+    ];
+    const match = aqiMap.find(([lo,hi]) => aqi >= lo && aqi <= hi) || aqiMap[4];
+    document.getElementById('aqi-label').textContent = match[2];
+    document.getElementById('aqi-label').style.color = match[3];
+    document.getElementById('aqi-bar').style.width = Math.min((aqi/300)*100, 100) + '%';
+  } else {
+    document.getElementById('aqi-val').textContent = '—';
+    document.getElementById('aqi-label').textContent = 'Sem dados';
+    document.getElementById('aqi-bar').style.width = '0%';
+  }
+
+  // Alerts Check
+  checkAlerts(data, aqiData);
 }
 
-// ─── UI State ─────────────────────────────────────────────
+function getMoonPhase() {
+  const lp = 2551443;
+  const now = new Date();
+  const newMoon = new Date(1970, 0, 7, 20, 35, 0);
+  const phase = ((now.getTime() - newMoon.getTime()) / 1000) % lp;
+  const pct = phase / lp;
+  
+  if (pct < 0.03 || pct > 0.97) return { emoji: '🌑', label: 'Nova' };
+  if (pct < 0.22) return { emoji: '🌒', label: 'Crescente' };
+  if (pct < 0.28) return { emoji: '🌓', label: 'Quarto Crescente' };
+  if (pct < 0.47) return { emoji: '🌔', label: 'Gibosa Crescente' };
+  if (pct < 0.53) return { emoji: '🌕', label: 'Cheia' };
+  if (pct < 0.72) return { emoji: '🌖', label: 'Gibosa Minguante' };
+  if (pct < 0.78) return { emoji: '🌗', label: 'Quarto Minguante' };
+  return { emoji: '🌘', label: 'Minguante' };
+}
+
+// ─── Alerts & UI State ────────────────────────────────────
+function checkAlerts(data, aqi) {
+  const uv = data.daily?.uv_index_max?.[0] || 0;
+  const rain = data.daily?.precipitation_probability_max?.[0] || 0;
+  const temp = data.current?.temperature_2m || 15;
+  const aq = aqi?.us_aqi || 0;
+
+  if (aq > 150) showAlert('⚠️ Qualidade do ar ruim — Evite atividades ao ar livre');
+  else if (uv >= 7) showAlert('☀️ Índice UV muito alto — Use protetor solar');
+  else if (rain > 70) showAlert('🌧️ Alta probabilidade de chuva hoje — Leve guarda-chuva');
+  else if (temp < 5) showAlert('🥶 Frio extremo — Agasalhe-se bem');
+  else hideAlert();
+}
+
+export function showAlert(msg) {
+  const el = document.getElementById('alert-banner');
+  document.getElementById('alert-text').textContent = msg;
+  el.classList.remove('hidden');
+}
+export function hideAlert() {
+  document.getElementById('alert-banner').classList.add('hidden');
+}
+
+export function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
 export function showLoading() {
   globalLoading.classList.remove('hidden');
   weatherContent.classList.add('hidden');
@@ -218,11 +345,9 @@ export function initParticles(code, isDay) {
   const container = document.getElementById('particles-container');
   container.innerHTML = '';
 
-  // Remove existing special bg elements
   document.querySelectorAll('.sun-glow,.lightning').forEach(el => el.remove());
 
   if (!isDay) {
-    // Stars
     for (let i = 0; i < 120; i++) {
       const s = document.createElement('span');
       s.className = 'star';
@@ -233,7 +358,6 @@ export function initParticles(code, isDay) {
   }
 
   if ([0,1].includes(code)) {
-    // Sun glow
     const glow = document.createElement('div');
     glow.className = 'sun-glow';
     bgEl.appendChild(glow);

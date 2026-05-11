@@ -85,3 +85,21 @@ export async function getWeatherData(lat, lon) {
   const data = await res.json();
   return data;
 }
+
+// Qualidade do Ar (AQI)
+export async function getAirQuality(lat, lon) {
+  try {
+    const params = new URLSearchParams({
+      latitude: lat,
+      longitude: lon,
+      current: 'us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide',
+      timezone: 'auto'
+    });
+    const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+    const data = await res.json();
+    return data.current;
+  } catch {
+    return null;
+  }
+}
+

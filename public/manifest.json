@@ -1,0 +1,21 @@
+{
+  "name": "Weather Dashboard",
+  "short_name": "Weather",
+  "description": "Aplicativo de previsão do tempo avançado.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#151c35",
+  "theme_color": "#1565d8",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='192' height='192'><rect width='192' height='192' rx='40' fill='%231565d8'/><circle cx='96' cy='96' r='40' fill='%23facc15'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><rect width='512' height='512' rx='100' fill='%231565d8'/><circle cx='256' cy='256' r='100' fill='%23facc15'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
