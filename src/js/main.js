@@ -203,11 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     handleGeolocation(true);
   }
-  
-  // Service Worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW reg failed', err));
-  }
 });
 
 // ── Handlers ──────────────────────────────────────────────

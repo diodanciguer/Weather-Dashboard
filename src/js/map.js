@@ -23,6 +23,10 @@ export function initMap() {
 
 export function updateMap(lat, lon, cityName, temp) {
   if (!map) return;
+  
+  // Força o recálculo do tamanho do container, necessário pois ele inicia invisível
+  setTimeout(() => map.invalidateSize(), 300);
+  
   map.setView([lat, lon], 10);
   
   if (marker) map.removeLayer(marker);
