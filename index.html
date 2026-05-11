@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/src/css/style.css">
+  </head>
+  <body>
+    <div id="app" class="app-container glass-panel">
+      
+      <header>
+        <div class="search-bar">
+          <i data-lucide="search"></i>
+          <input type="text" id="search-input" placeholder="Buscar cidade..." autocomplete="off">
+          <button id="location-btn" aria-label="Usar localização atual" title="Usar localização atual">
+            <i data-lucide="map-pin"></i>
+          </button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <!-- Global Loading State -->
+        <div id="global-loading" class="global-loading hidden">
+          <div class="spinner"></div>
+          <p>Buscando clima...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error-message" class="error-message hidden">
+          Cidade não encontrada. Tente novamente.
+        </div>
+
+        <!-- Weather Content Grid -->
+        <div id="weather-content" class="weather-content hidden">
+          
+          <!-- Current Weather -->
+          <section class="current-weather glass-panel">
+            <div class="current-weather-info">
+              <h1 class="city" id="current-city">São Paulo</h1>
+              <p class="date" id="current-date">Segunda-feira, 11 Maio</p>
+              <h2 class="temp"><span id="current-temp">24</span>°C</h2>
+              <p class="description" id="current-desc">Ensolarado</p>
+            </div>
+            <img src="" alt="Ícone do clima" id="current-icon" class="current-weather-icon">
+          </section>
+
+          <!-- Hourly Forecast -->
+          <section class="hourly-forecast glass-panel">
+            <h2>Hoje</h2>
+            <div class="hourly-scroll" id="hourly-container">
+              <!-- JS Injected -->
+            </div>
+          </section>
+
+          <!-- 7-Day Forecast -->
+          <section class="daily-forecast glass-panel">
+            <h2>Próximos Dias</h2>
+            <div class="daily-list" id="daily-container">
+              <!-- JS Injected -->
+            </div>
+          </section>
+
+          <!-- Advanced Metrics -->
+          <section class="metrics-section">
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="thermometer-sun"></i>
+                Sensação Térmica
+              </div>
+              <div class="metric-value"><span id="feels-like">25</span>°</div>
+            </div>
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="droplets"></i>
+                Umidade
+              </div>
+              <div class="metric-value"><span id="humidity">60</span>%</div>
+            </div>
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="wind"></i>
+                Vento
+              </div>
+              <div class="metric-value"><span id="wind">15</span> <span style="font-size: 1rem">km/h</span></div>
+            </div>
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="sun"></i>
+                Índice UV
+              </div>
+              <div class="metric-value"><span id="uv-index">5</span></div>
+            </div>
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="eye"></i>
+                Visibilidade
+              </div>
+              <div class="metric-value"><span id="visibility">10</span> <span style="font-size: 1rem">km</span></div>
+            </div>
+            <div class="metric-card glass-panel">
+              <div class="metric-header">
+                <i data-lucide="gauge"></i>
+                Pressão
+              </div>
+              <div class="metric-value"><span id="pressure">1012</span> <span style="font-size: 1rem">hPa</span></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- Init script -->
+    <script type="module" src="/src/js/main.js"></script>
+  </body>
+</html>
