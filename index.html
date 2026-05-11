@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,57 +15,109 @@
   <body>
     <div id="app" class="app-container">
 
-      <!-- ── Header / Search ── -->
+      <!-- ── Header ── -->
       <header>
         <div class="search-bar">
           <i data-lucide="search"></i>
           <input type="text" id="search-input" placeholder="Buscar cidade..." autocomplete="off">
-          <button id="location-btn" aria-label="Usar minha localização">
+          <button id="location-btn" aria-label="Usar minha localização" title="Usar minha localização">
             <i data-lucide="navigation-2"></i>
           </button>
         </div>
+
+        <!-- Theme toggle -->
+        <button id="theme-toggle" aria-label="Alternar tema" title="Alternar tema claro/escuro">
+          <i data-lucide="sun" id="theme-icon-light"></i>
+          <i data-lucide="moon" id="theme-icon-dark" class="hidden"></i>
+        </button>
       </header>
 
       <!-- ── Dashboard ── -->
       <main class="dashboard">
 
         <!-- Loading -->
-        <div id="global-loading" class="hidden">
+        <div id="global-loading" class="hidden loading-state">
           <div class="spinner"></div>
           <p>Buscando clima...</p>
         </div>
 
         <!-- Error -->
-        <p id="error-message" class="hidden">Cidade não encontrada. Tente outra busca.</p>
+        <p id="error-message" class="hidden error-box"></p>
 
         <!-- Content Grid -->
         <div id="weather-content" class="weather-content hidden">
 
-          <!-- ① Hero Card — Clima Atual -->
+          <!-- ① Hero — Clima Atual -->
           <section class="current-weather glass" id="current-weather-card">
             <div class="current-weather-info">
-              <h1 class="city" id="current-city">—</h1>
+
+              <!-- Cidade + País -->
+              <div class="city-row">
+                <i data-lucide="map-pin" class="city-pin-icon"></i>
+                <div>
+                  <h1 class="city" id="current-city">—</h1>
+                  <p class="country" id="current-country"></p>
+                </div>
+              </div>
+
               <p class="date" id="current-date">—</p>
+
               <div class="temp-row">
                 <span class="temp" id="current-temp">—</span>
                 <span class="temp-unit">°C</span>
               </div>
+
               <p class="description" id="current-desc">—</p>
+
+              <!-- Mini info row: Chuva hoje + Vento -->
+              <div class="hero-extras">
+                <span class="hero-extra-item">
+                  <i data-lucide="droplets"></i>
+                  <span id="precip-chance">—</span>% de chuva
+                </span>
+                <span class="hero-extra-item">
+                  <i data-lucide="wind"></i>
+                  <span id="hero-wind">—</span> km/h
+                </span>
+              </div>
+
             </div>
-            <!-- Hero Icon injetado via JS -->
+            <!-- Hero Icon -->
             <div class="weather-icon-hero" id="hero-icon"></div>
           </section>
 
           <!-- ② Previsão Horária -->
           <section class="hourly-forecast glass">
-            <p class="section-label">Hoje — Por Hora</p>
+            <p class="section-label">
+              <i data-lucide="clock"></i> Hoje — Por Hora
+            </p>
             <div class="hourly-scroll" id="hourly-container"></div>
           </section>
 
           <!-- ③ 7 Dias (sidebar) -->
           <section class="daily-forecast glass">
-            <p class="section-label" style="margin-bottom:1.2rem">Próximos 7 Dias</p>
+            <p class="section-label">
+              <i data-lucide="calendar-days"></i> Próximos 7 Dias
+            </p>
             <div class="daily-list" id="daily-container"></div>
+
+            <!-- Nascer e pôr do sol -->
+            <div class="sun-times">
+              <div class="sun-time-item">
+                <i data-lucide="sunrise"></i>
+                <div>
+                  <p class="sun-label">Nascer</p>
+                  <p class="sun-val" id="sunrise-time">—</p>
+                </div>
+              </div>
+              <div class="sun-time-item">
+                <i data-lucide="sunset"></i>
+                <div>
+                  <p class="sun-label">Pôr do Sol</p>
+                  <p class="sun-val" id="sunset-time">—</p>
+                </div>
+              </div>
+            </div>
           </section>
 
           <!-- ④ Métricas Avançadas -->
@@ -73,7 +125,7 @@
 
             <div class="metric-card glass">
               <p class="metric-label"><i data-lucide="thermometer"></i> Sensação Térmica</p>
-              <p class="metric-val"><span id="feels-like">—</span><span class="metric-unit">°</span></p>
+              <p class="metric-val"><span id="feels-like">—</span><span class="metric-unit">°C</span></p>
             </div>
 
             <div class="metric-card glass">
@@ -84,11 +136,13 @@
             <div class="metric-card glass">
               <p class="metric-label"><i data-lucide="wind"></i> Vento</p>
               <p class="metric-val"><span id="wind">—</span><span class="metric-unit"> km/h</span></p>
+              <p class="metric-sub" id="wind-dir-label"></p>
             </div>
 
             <div class="metric-card glass">
               <p class="metric-label"><i data-lucide="sun"></i> Índice UV</p>
-              <p class="metric-val" id="uv-index">—</p>
+              <p class="metric-val" id="uv-value">—</p>
+              <div class="uv-bar-wrap"><div class="uv-bar" id="uv-bar"></div></div>
               <p class="metric-sub" id="uv-label"></p>
             </div>
 
@@ -98,7 +152,7 @@
             </div>
 
             <div class="metric-card glass">
-              <p class="metric-label"><i data-lucide="gauge"></i> Pressão</p>
+              <p class="metric-label"><i data-lucide="gauge"></i> Pressão Atm.</p>
               <p class="metric-val"><span id="pressure">—</span><span class="metric-unit"> hPa</span></p>
             </div>
 

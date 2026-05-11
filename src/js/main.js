@@ -1,98 +1,106 @@
 import { searchCity, getWeatherData, getReverseGeocoding } from './api.js';
-import { 
-  updateCurrentWeather, 
-  updateHourlyForecast, 
-  updateDailyForecast, 
-  updateMetrics, 
-  showLoading, 
-  hideLoading, 
-  showError 
+import {
+  updateCurrentWeather, updateHourlyForecast, updateDailyForecast,
+  updateMetrics, showLoading, hideLoading, showError
 } from './ui.js';
 
-// Inicialização
+// ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicia os ícones
-  if (window.lucide) {
-    window.lucide.createIcons();
+
+  // Render static lucide icons (header buttons, metric labels, etc.)
+  if (window.lucide) window.lucide.createIcons();
+
+  // ── Theme Toggle ────────────────────────────────────────────────────────────
+  const html          = document.documentElement;
+  const themeToggle   = document.getElementById('theme-toggle');
+  const iconLight     = document.getElementById('theme-icon-light');
+  const iconDark      = document.getElementById('theme-icon-dark');
+
+  // Read saved preference or default to dark
+  const savedTheme = localStorage.getItem('wd-theme') || 'dark';
+  applyTheme(savedTheme);
+
+  themeToggle.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem('wd-theme', next);
+  });
+
+  function applyTheme(theme) {
+    html.setAttribute('data-theme', theme);
+    if (theme === 'light') {
+      iconLight.classList.add('hidden');
+      iconDark.classList.remove('hidden');
+    } else {
+      iconDark.classList.add('hidden');
+      iconLight.classList.remove('hidden');
+    }
   }
 
-  // Elementos
+  // ── Search ──────────────────────────────────────────────────────────────────
   const searchInput = document.getElementById('search-input');
   const locationBtn = document.getElementById('location-btn');
 
-  // Event Listeners
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-      const query = searchInput.value.trim();
-      if (query) {
-        handleSearch(query);
-      }
+      const q = searchInput.value.trim();
+      if (q) handleSearch(q);
     }
   });
 
-  locationBtn.addEventListener('click', () => {
-    handleGeolocation();
-  });
+  locationBtn.addEventListener('click', () => handleGeolocation());
 
-  // Tenta buscar o clima local ao iniciar
+  // Auto-detect location on first load
   handleGeolocation(true);
 });
 
+// ─── Handlers ─────────────────────────────────────────────────────────────────
 async function handleSearch(query) {
   try {
     showLoading();
-    // 1. Busca Lat/Lon da cidade
-    const cityData = await searchCity(query);
-    
-    // 2. Busca dados climáticos
-    const weatherData = await getWeatherData(cityData.latitude, cityData.longitude);
-    
-    // 3. Atualiza UI
-    updateAllUI(weatherData, cityData);
+    const city    = await searchCity(query);
+    const weather = await getWeatherData(city.latitude, city.longitude);
+    updateAll(weather, city);
     hideLoading();
-  } catch (error) {
+  } catch {
     showError('Cidade não encontrada. Verifique o nome e tente novamente.');
   }
 }
 
-function handleGeolocation(isInitial = false) {
+function handleGeolocation(isInit = false) {
   if (!navigator.geolocation) {
-    if (!isInitial) showError('Geolocalização não é suportada pelo seu navegador.');
-    // Fallback para uma cidade padrão
-    if (isInitial) handleSearch('São Paulo');
+    if (isInit) handleSearch('São Paulo');
+    else showError('Geolocalização não suportada neste navegador.');
     return;
   }
 
-  if(!isInitial) showLoading();
+  if (!isInit) showLoading();
 
   navigator.geolocation.getCurrentPosition(
-    async (position) => {
+    async (pos) => {
       try {
-        if(isInitial) showLoading();
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        
-        // Pega os dados do clima
-        const weatherData = await getWeatherData(lat, lon);
-        
-        // Tenta descobrir o nome da cidade baseada nas coordenadas
-        const cityData = await getReverseGeocoding(lat, lon);
-        
-        updateAllUI(weatherData, cityData);
+        if (isInit) showLoading();
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const [weather, city] = await Promise.all([
+          getWeatherData(lat, lon),
+          getReverseGeocoding(lat, lon),
+        ]);
+        updateAll(weather, city);
         hideLoading();
-      } catch (error) {
-        showError('Erro ao buscar dados da sua localização.');
-        if(isInitial) handleSearch('São Paulo'); // Fallback
+      } catch {
+        if (isInit) handleSearch('São Paulo');
+        else showError('Erro ao buscar clima da sua localização.');
       }
     },
-    (error) => {
-      if (!isInitial) showError('Acesso à localização negado.');
-      if (isInitial) handleSearch('São Paulo'); // Fallback para SP se negar a localização
+    () => {
+      if (isInit) handleSearch('São Paulo');
+      else showError('Acesso à localização negado.');
     }
   );
 }
 
-function updateAllUI(weatherData, cityData) {
+// ─── Update all UI sections ───────────────────────────────────────────────────
+function updateAll(weatherData, cityData) {
   updateCurrentWeather(weatherData, cityData);
   updateHourlyForecast(weatherData);
   updateDailyForecast(weatherData);
