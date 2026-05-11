@@ -1,108 +1,116 @@
-import { searchCity, getWeatherData, getReverseGeocoding } from './api.js';
+import { searchCity, searchCities, getWeatherData, getReverseGeocoding } from './api.js';
 import {
   updateCurrentWeather, updateHourlyForecast, updateDailyForecast,
   updateMetrics, showLoading, hideLoading, showError
 } from './ui.js';
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-
-  // Render static lucide icons (header buttons, metric labels, etc.)
   if (window.lucide) window.lucide.createIcons();
 
-  // ── Theme Toggle ────────────────────────────────────────────────────────────
-  const html          = document.documentElement;
-  const themeToggle   = document.getElementById('theme-toggle');
-  const iconLight     = document.getElementById('theme-icon-light');
-  const iconDark      = document.getElementById('theme-icon-dark');
+  // ── Theme ─────────────────────────────────────────────────
+  const html     = document.documentElement;
+  const toggle   = document.getElementById('theme-toggle');
+  const iconSun  = document.getElementById('icon-sun');
+  const iconMoon = document.getElementById('icon-moon');
 
-  // Read saved preference or default to dark
-  const savedTheme = localStorage.getItem('wd-theme') || 'dark';
-  applyTheme(savedTheme);
-
-  themeToggle.addEventListener('click', () => {
+  function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    iconSun.classList.toggle('hidden', t === 'light');
+    iconMoon.classList.toggle('hidden', t === 'dark');
+  }
+  applyTheme(localStorage.getItem('wd-theme') || 'dark');
+  toggle.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     applyTheme(next);
     localStorage.setItem('wd-theme', next);
   });
 
-  function applyTheme(theme) {
-    html.setAttribute('data-theme', theme);
-    if (theme === 'light') {
-      iconLight.classList.add('hidden');
-      iconDark.classList.remove('hidden');
-    } else {
-      iconDark.classList.add('hidden');
-      iconLight.classList.remove('hidden');
-    }
-  }
+  // ── Autocomplete ──────────────────────────────────────────
+  const input   = document.getElementById('search-input');
+  const listEl  = document.getElementById('autocomplete-list');
+  let acTimer   = null;
 
-  // ── Search ──────────────────────────────────────────────────────────────────
-  const searchInput = document.getElementById('search-input');
-  const locationBtn = document.getElementById('location-btn');
+  input.addEventListener('input', () => {
+    clearTimeout(acTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { listEl.classList.add('hidden'); return; }
+    acTimer = setTimeout(async () => {
+      try {
+        const cities = await searchCities(q, 5);
+        listEl.innerHTML = '';
+        if (!cities.length) { listEl.classList.add('hidden'); return; }
+        cities.forEach(city => {
+          const li = document.createElement('li');
+          li.innerHTML = `<i data-lucide="map-pin"></i><span>${city.name}</span><span class="auto-country">${city.country ?? ''}</span>`;
+          li.addEventListener('click', () => {
+            input.value = city.name;
+            listEl.classList.add('hidden');
+            fetchAndRender(city.latitude, city.longitude, { name: city.name, country: city.country });
+          });
+          listEl.appendChild(li);
+        });
+        listEl.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+      } catch { listEl.classList.add('hidden'); }
+    }, 300);
+  });
 
-  searchInput.addEventListener('keypress', (e) => {
+  // Close autocomplete on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) listEl.classList.add('hidden');
+  });
+
+  // Enter key search
+  input.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-      const q = searchInput.value.trim();
+      listEl.classList.add('hidden');
+      const q = input.value.trim();
       if (q) handleSearch(q);
     }
   });
 
-  locationBtn.addEventListener('click', () => handleGeolocation());
+  // Location button
+  document.getElementById('location-btn').addEventListener('click', () => handleGeolocation());
 
-  // Auto-detect location on first load
+  // Auto-init
   handleGeolocation(true);
 });
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
+// ── Handlers ──────────────────────────────────────────────
 async function handleSearch(query) {
   try {
     showLoading();
-    const city    = await searchCity(query);
-    const weather = await getWeatherData(city.latitude, city.longitude);
-    updateAll(weather, city);
-    hideLoading();
+    const city = await searchCity(query);
+    await fetchAndRender(city.latitude, city.longitude, city);
   } catch {
     showError('Cidade não encontrada. Verifique o nome e tente novamente.');
   }
 }
 
 function handleGeolocation(isInit = false) {
-  if (!navigator.geolocation) {
-    if (isInit) handleSearch('São Paulo');
-    else showError('Geolocalização não suportada neste navegador.');
-    return;
-  }
-
+  if (!navigator.geolocation) { if (isInit) handleSearch('São Paulo'); return; }
   if (!isInit) showLoading();
 
   navigator.geolocation.getCurrentPosition(
-    async (pos) => {
+    async ({ coords: { latitude: lat, longitude: lon } }) => {
       try {
         if (isInit) showLoading();
-        const { latitude: lat, longitude: lon } = pos.coords;
-        const [weather, city] = await Promise.all([
-          getWeatherData(lat, lon),
-          getReverseGeocoding(lat, lon),
-        ]);
-        updateAll(weather, city);
-        hideLoading();
+        const [city] = await Promise.all([getReverseGeocoding(lat, lon)]);
+        await fetchAndRender(lat, lon, city);
       } catch {
         if (isInit) handleSearch('São Paulo');
-        else showError('Erro ao buscar clima da sua localização.');
+        else showError('Erro ao buscar sua localização.');
       }
     },
-    () => {
-      if (isInit) handleSearch('São Paulo');
-      else showError('Acesso à localização negado.');
-    }
+    () => { if (isInit) handleSearch('São Paulo'); else showError('Localização negada.'); }
   );
 }
 
-// ─── Update all UI sections ───────────────────────────────────────────────────
-function updateAll(weatherData, cityData) {
-  updateCurrentWeather(weatherData, cityData);
-  updateHourlyForecast(weatherData);
-  updateDailyForecast(weatherData);
-  updateMetrics(weatherData);
+async function fetchAndRender(lat, lon, cityData) {
+  const weather = await getWeatherData(lat, lon);
+  updateCurrentWeather(weather, cityData);
+  updateHourlyForecast(weather);
+  updateDailyForecast(weather);
+  updateMetrics(weather);
+  hideLoading();
 }

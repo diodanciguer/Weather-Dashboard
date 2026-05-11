@@ -40,12 +40,19 @@ export function getWindDir(deg) {
   return { label, rotation: deg };
 }
 
-// Geocodificação direta (cidade → lat/lon)
+// Geocodificação direta — 1 resultado (busca direta)
 export async function searchCity(query) {
   const res  = await fetch(`${GEO_API_URL}?name=${encodeURIComponent(query)}&count=1&language=pt&format=json`);
   const data = await res.json();
   if (!data.results?.length) throw new Error('Cidade não encontrada');
   return data.results[0];
+}
+
+// Autocomplete — múltiplos resultados
+export async function searchCities(query, count = 5) {
+  const res  = await fetch(`${GEO_API_URL}?name=${encodeURIComponent(query)}&count=${count}&language=pt&format=json`);
+  const data = await res.json();
+  return data.results ?? [];
 }
 
 // Geocodificação reversa (lat/lon → nome da cidade)
