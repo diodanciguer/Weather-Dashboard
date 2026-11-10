@@ -8,12 +8,12 @@
 
 *Read this in [Portuguese](#-português) 🇧🇷*
 
-A modern, fast, and responsive weather forecasting web application built from scratch. Focused on performance, high-quality UI/UX, and web development best practices. The visual design utilizes the **Glassmorphism** trend, populating real data through integration with public external APIs.
+A modern, fast, and responsive weather forecasting web application built from scratch. Focused on performance, high-quality UI/UX, and web development best practices. The Atmos interface combines a calm card layout, animated weather illustrations, light and dark themes, and real data from public APIs.
 
 ## ✨ Features
 
 - **Global City Search:** Search for the weather conditions of any city around the world.
-- **Smart Geolocation:** Automatically requests the user's location upon entry to provide local weather instantly.
+- **Local Weather:** Starts with São Paulo; the location button requests your permission to show local conditions.
 - **Detailed Forecast:**
   - Current weather with 'feels like' temperature and detailed description.
   - Interactive carousel displaying hourly forecasts for the next 24 hours.
@@ -27,7 +27,7 @@ A modern, fast, and responsive weather forecasting web application built from sc
 This project was built **without heavy frameworks** (like React or Angular) on purpose, to demonstrate a solid understanding of Web fundamentals and the JavaScript language:
 
 - **HTML5** (Semantic)
-- **CSS3** (Variables, Flexbox, CSS Grid, Animations, and *Glassmorphism*)
+- **CSS3** (Variables, Flexbox, CSS Grid, Animations, and Responsive Cards)
 - **JavaScript ES6+** (Modularization, Async/Await, Promises, DOM Manipulation)
 - **Vite** (Ultra-fast frontend tooling and bundler)
 - **Lucide Icons** (Beautiful interface icons)
@@ -83,12 +83,12 @@ This project stands out for being incredibly easy to clone and test, as it has n
 
 *Leia isto em [Inglês](#-weather-dashboard) 🇺🇸*
 
-Uma aplicação web moderna, rápida e responsiva de previsão do tempo, construída do zero com foco em performance, UI/UX de alta qualidade e boas práticas de desenvolvimento web. O visual utiliza a tendência de **Glassmorphism** com dados reais consumidos através da integração com APIs externas públicas.
+Uma aplicação web moderna, rápida e responsiva de previsão do tempo, construída do zero com foco em performance, UI/UX de alta qualidade e boas práticas de desenvolvimento web. A interface Atmos combina cartões claros, ilustrações climáticas animadas, temas claro e escuro e dados reais de APIs públicas.
 
 ## ✨ Funcionalidades
 
 - **Busca Global de Cidades:** Pesquise pelas condições climáticas de qualquer cidade ao redor do mundo.
-- **Geolocalização Inteligente:** Solicita a localização do usuário ao entrar e fornece o clima local automaticamente.
+- **Clima Local:** Inicia com São Paulo. O botão de localização solicita sua permissão para consultar o clima onde você está.
 - **Previsão Detalhada:**
   - Clima atual com sensação térmica e descrição detalhada.
   - Carrossel com previsão de hora em hora para as próximas 24 horas.
@@ -102,7 +102,7 @@ Uma aplicação web moderna, rápida e responsiva de previsão do tempo, constru
 Este projeto foi construído **sem o uso de frameworks pesados** (como React ou Angular) propositalmente, para demonstrar sólido domínio sobre as bases da Web e da linguagem:
 
 - **HTML5** (Semântico)
-- **CSS3** (Variáveis, Flexbox, CSS Grid, Animações e *Glassmorphism*)
+- **CSS3** (Variáveis, Flexbox, CSS Grid, Animações e Cartões Responsivos)
 - **JavaScript ES6+** (Modularização, Funções Assíncronas / Promessas, Manipulação do DOM)
 - **Vite** (Ferramenta de empacotamento ultrarrápida para o ambiente de desenvolvimento)
 - **Lucide Icons** (Biblioteca de ícones de interface)

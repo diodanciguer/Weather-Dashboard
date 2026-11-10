@@ -1,42 +1,44 @@
 let map = null;
 let marker = null;
-let layerControl = null;
-let tempLayer = null;
+let pendingFrame = 0;
 
 export function initMap() {
-  if (typeof L === 'undefined') return;
-  map = L.map('map-container', { zoomControl: false }).setView([0, 0], 2);
-  
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  const baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap &copy; CARTO'
+  if (typeof L === "undefined") return;
+  map = L.map("map-container", {
+    zoomControl: false,
+    scrollWheelZoom: false,
+  }).setView([0, 0], 2);
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
   }).addTo(map);
-
-  tempLayer = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=YOUR_OPENWEATHER_KEY', {
-    opacity: 0.5
-  });
-
-  // Open-Meteo doesn't have tile layers, openweathermap needs an API key which we don't have.
-  // Instead, let's just show the base map with the marker for the portfolio.
+  const resizeObserver = new ResizeObserver(() =>
+    map.invalidateSize({ pan: false }),
+  );
+  resizeObserver.observe(document.getElementById("map-container"));
 }
 
 export function updateMap(lat, lon, cityName, temp) {
   if (!map) return;
-  
-  // Força o recálculo do tamanho do container, necessário pois ele inicia invisível
-  setTimeout(() => map.invalidateSize(), 300);
-  
-  map.setView([lat, lon], 10);
-  
-  if (marker) map.removeLayer(marker);
-  
-  const icon = L.divIcon({
-    className: 'custom-map-marker',
-    html: `<div style="background:var(--t1);color:#000;padding:4px 8px;border-radius:12px;font-weight:700;font-size:12px;box-shadow:0 2px 10px rgba(0,0,0,0.2);white-space:nowrap;">${cityName}: ${Math.round(temp)}°</div>`,
-    iconSize: [0, 0],
-    iconAnchor: [50, 30]
+  cancelAnimationFrame(pendingFrame);
+  pendingFrame = requestAnimationFrame(() => {
+    map.invalidateSize({ pan: false });
+    map.setView([lat, lon], 10);
+    if (marker) map.removeLayer(marker);
+    const label = document.createElement("div");
+    label.className = "map-weather-label";
+    label.textContent = `${cityName}: ${Math.round(temp)}°`;
+    const icon = L.divIcon({
+      className: "custom-map-marker",
+      html: label,
+      iconSize: [0, 0],
+      iconAnchor: [50, 30],
+    });
+    marker = L.marker([lat, lon], {
+      icon,
+      title: `${cityName}: ${Math.round(temp)}°`,
+    }).addTo(map);
   });
-
-  marker = L.marker([lat, lon], { icon }).addTo(map);
 }
